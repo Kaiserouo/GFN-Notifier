@@ -1,7 +1,9 @@
 # GFN Notifier
 
-搭配GFN Queue Tracker一起使用。
+搭配[GFN Queue Tracker](https://github.com/Kaiserouo/GFN-Queue-Tracker)一起使用。
 這是用來當做一個API，回傳GeForce NOW目前排隊人數用的。
+
+Demo video: https://youtu.be/jcujfVqw4Y0
 
 ## Prerequisites & Setup
 ### Tesseract
@@ -15,7 +17,7 @@
   + 應該會是`<your_path>/Tesseract-OCR/tessdata`。
 
 ### TeamViewer
-因為有各種因素可能會出問題，所以給予遠端透過此伺服器開啟TeamViewer開啟的選項。
+因為有各種因素可能會出問題，所以給予遠端透過此伺服器開啟TeamViewer開啟的選項。如果你出門前忘了開TeamViewer可以透過一次性要求的API開起來。
 
 ### VPN
 因為家裡電腦八成沒有public IP，需要弄一個VPN出來。
@@ -51,6 +53,7 @@ ref. `requirements.txt`
 
 ### GFN
 + `GFN_SEARCH_STRING`: 找GFN視窗的時候用來對應的子字串，如果找到的視窗數不等於1的話都會回傳失敗。
+  + 你可以在`main.py`的視窗裡看到搜尋到的視窗有什麼。那個list應該只有一個東西才對。
 + `GFN_START_COMMAND`: 用來開啟遊戲用的。不想遠端開啟遊戲的話不改也沒關係。
   + 請在GFN裡面把想要的遊戲設成捷徑，然後右鍵 > 內容，把目標複製貼上。
 ![](images/gfn_start_command.png)
@@ -68,7 +71,7 @@ ref. `requirements.txt`
 }
 ```
 其中`count`為負時為錯誤或結束。請參考傳的message看看目前狀況。
-其實因為GFN進入遊戲後照理來說應該找不到排隊數字，所以會有錯誤(為找不到排隊數字)。請根據GFN Queue Tracker紀錄的History欄位看看是否真的是錯誤。
+其實因為GFN進入遊戲後照理來說應該找不到排隊數字，所以會有錯誤(為找不到排隊數字)。請根據GFN Queue Tracker紀錄的History欄位看看是否是錯誤，還是其實真的是人數到了。
 
 其他一次性要求(request list)回傳
 ```
@@ -78,3 +81,8 @@ ref. `requirements.txt`
 }
 ```
 其中`code`為`0`的時候是success，其他都是fail，並且應該要付一個錯誤訊息。
+
+注意每次收到`/gfnviewer`的request時都會截一次圖跑一次OCR，所以其實無法應付大量/間隔短的request。
+你是可以另開一個thread然後每隔幾秒截圖OCR更新某個變數，這樣可以應付多request。不過因為是自用所以不用擔心這個。
+
+因為用flask的原因，請不要把這個伺服器真的公開到網路上。我最後能接受用flask的其中一個原因是VPN變相給他一個保護...。
