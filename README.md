@@ -58,3 +58,23 @@ ref. `requirements.txt`
 ### TeamViewer
 用來遠端開啟TeamViewer用的。沒有的話不改也沒關係。
 + `TEAMVIEWER_PATH`: TeamViewer的路徑。
+
+## Developer Note
+隊伍數量追蹤器(Queue tracker)回傳
+```
+{
+    "count": integer,
+    "message": string
+}
+```
+其中`count`為負時為錯誤或結束。請參考傳的message看看目前狀況。
+其實因為GFN進入遊戲後照理來說應該找不到排隊數字，所以會有錯誤(為找不到排隊數字)。請根據GFN Queue Tracker紀錄的History欄位看看是否真的是錯誤。
+
+其他一次性要求(request list)回傳
+```
+{
+    "code": integer,
+    "message": string
+}
+```
+其中`code`為`0`的時候是success，其他都是fail，並且應該要付一個錯誤訊息。
