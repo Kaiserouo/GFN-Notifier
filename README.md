@@ -42,6 +42,8 @@ ref. `requirements.txt`
 + 遠端開啟GFN: `http://25.8.47.6:12000/gfnopener`
 + 遠端開啟TeamViewer: `http://25.8.47.6:12000/tvopener`
 
+注意在GFN Queue Tracker追蹤的時候 / 使用`/gfnviewer`的時候，如果GFN被最小化的話他會把他叫回來。這是因為需要截圖：**GFN可以被其他視窗擋住沒關係，但是不能最小化**。我的截圖方法即使被擋住也可以截，所以不需要讓GFN一直顯示在最上層。
+
 ## Config
 ### VPN
 基本上是為了執行後自動開啟VPN用的。綁定LogMeIn Hamachi。
