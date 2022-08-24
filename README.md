@@ -1,5 +1,23 @@
 # GFN Notifier
+## English version summary
+Used with [GFN Queue Tracker](https://github.com/Kaiserouo/GFN-Queue-Tracker). This is a web API for returning GeForce NOW's current queue count on this computer.
 
+Demo video (Traditional Chinese): https://youtu.be/jcujfVqw4Y0
+
+Supports:
++ Returning GeForce NOW's current queue count (`http://<ip>:<port>/gfnviewer`)
++ Open Geforce NOW (`http://<ip>:<port>/gfnopener`)
++ Open TeamViewer (`http://<ip>:<port>/tvopener`)
+
+Note that it was meant to be used with VPN:
+1. Install LogMeIn Hamachi or other VPN on your computer
+2. Try to make your phone connect to the same VPN.
+3. Adjust config in `main.py`, especially `VPN_SERVER_IP`.
+4. Run `python main.py` with this folder as current working directory.
+
+Preferrably use private (enough) VPN for this server, since it uses flask, which is not really meant for productive usage.
+
+## Traditional Chinese Version
 搭配[GFN Queue Tracker](https://github.com/Kaiserouo/GFN-Queue-Tracker)一起使用。
 這是用來當做一個API，回傳GeForce NOW目前排隊人數用的。
 
@@ -7,7 +25,8 @@ Demo video: https://youtu.be/jcujfVqw4Y0
 
 ## Prerequisites & Setup
 ### Tesseract
-**必須**需要安裝Tesseract。請裝最新版 (> 5.0)。
+> 如果用舊版的偵測方式 (GFNViewerTesseract) 的話
+請裝最新版 (> 5.0)。
 **請確認有安裝到繁體中文`chi_tra`的檔案！** 也就是安裝完之後，應該會有檔案`<your_path>/Tesseract-OCR/tessdata/chi_tra.traineddata`
 
 請確認環境變數有設定正確：
