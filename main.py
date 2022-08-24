@@ -5,13 +5,17 @@ import win32gui, win32con, win32ui, win32api
 import time
 from PIL import Image
 import pytesseract
+import collections
 import re
+import os
+import datetime
 from ctypes import windll
+from pathlib import Path
 
 # --- config ---
 
 # VPN settings
-TOGGLE_VPN = True
+TOGGLE_VPN = True   
 VPN_NAME = 'Kaiserouo'
 VPN_SERVER_IP = '25.8.47.6'
 VPN_SERVER_PORT = 12000
@@ -29,7 +33,10 @@ TEAMVIEWER_PATH = r'C:\Program Files\TeamViewer\TeamViewer.exe'
 
 app = Flask(__name__)
 
-class GFNViewer:
+class GFNHwndManager:
+    """
+        Manages everything regarding hwnd. Especially GFN
+    """
     def __init__(self):
         windll.user32.SetProcessDPIAware()
 
@@ -95,9 +102,17 @@ class GFNViewer:
 
     def getGFNHwnd(self):
         return self.getHwnd(GFN_SEARCH_STRING)
+
+class GFNViewerTesseract:
+    """
+        Snapshot the window and use OCR to work out the queue number;
+        Not really direct, a bit slow, and may have error.
+    """
+    def __init__(self):
+        self.hwnd_manager = GFNHwndManager()
     
     def getQueueCount(self):
-        hwnd = self.getGFNHwnd()
+        hwnd = self.hwnd_manager.getGFNHwnd()
         if hwnd < 0:
             # not executing
             return {
@@ -113,7 +128,7 @@ class GFNViewer:
                 win32gui.SetForegroundWindow(hwnd)
                 
         # get image
-        img = self._getScreenshot(hwnd)
+        img = self.hwnd_manager._getScreenshot(hwnd)
         w, h = img.size
         # img = img.crop((w // 3, h // 3, 2 * w // 3, 2 * h // 3))
         # img = img.resize((w, h))
@@ -136,14 +151,97 @@ class GFNViewer:
         }
 
     def click(self, x, y):
-        hwnd = self.getGFNHwnd()
+        hwnd = self.hwnd_manager.getGFNHwnd()
         if hwnd < 0:
             return
         lParam = win32api.MAKELONG(x, y)
         win32gui.SendMessage(hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
         win32gui.SendMessage(hwnd, win32con.WM_LBUTTONUP, None, lParam)
 
-gfnviewer = GFNViewer()
+class GFNViewerDebugFile:
+    """
+        Use GFN debug file to work out the queue count.
+        Very direct (should've known this sooner), no error, but will open a 1MB file and process
+        everytime a request come in.
+
+        Should close GFN everytime your time had finished, since the debug file will only be cleaned
+        when GFN launches. Otherwise it will build up.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.debug_fpath = Path(os.getenv('LOCALAPPDATA')) / 'NVIDIA Corporation' / 'GeForceNOW' / 'debug.log'
+    
+    def _tail(self, n=10, fpath=None):
+        # Return the last n lines of a file. 
+        # For file with 7000 lines, faster than reading the file backward and manually finding `\n`,
+        # which is weird considering deque actually reads the whole file.
+        # Power of C code I guess.
+        if fpath is None:
+            fpath = self.debug_fpath
+        with fpath.open('r') as fin:
+            return collections.deque(fin, n)
+
+    def _readAllLines(self, fpath=None):
+        if fpath is None:
+            fpath = self.debug_fpath
+        with fpath.open('r') as fin:
+            return fin.readlines()
+
+    def _parseQueueLine(self, s):
+        # Some lines in debug.log look like the following:
+        # [2022-08-24/ 10:54:53.659:INFO:simple_grid_app.cc(1422)] onSessionSetupProgress(state: 1, queue: 32, eta: 30000)
+        # [2022-08-24/ 10:54:53.659:INFO:simple_grid_app.cc(1422)] onSessionSetupProgress(state: 2, queue: 0, eta: 20000)
+
+        result = re.search("\\[(.+)/[ ]*(.+):INFO:.+\\].+\\(state: (.*), queue: (.*), eta: (.*)\\)", s)
+        return {
+            "datetime": datetime.datetime.strptime(
+                result.group(1) + ' ' + result.group(2),
+                "%Y-%m-%d %H:%M:%S.%f"
+            ),
+            "state": int(result.group(3)),
+            "queue": int(result.group(4)),
+            "eta": int(result.group(5)),
+        }
+
+    def _filterQueueLine(self, s_ls):
+        return [s for s in s_ls if "onSessionSetupProgress" in s]
+    
+    def _parseQueue(self, s_ls):
+        return [self._parseQueueLine(s) for s in s_ls]
+
+    def getQueueCount(self):
+        # get queue (tail 200 lines, roughly 5.7ms for 7500 line file)
+        queue_ls = self._parseQueue(self._filterQueueLine(self._tail(n=200)))
+        if len(queue_ls) == 0:
+            # just fall back to reading the whole file (roughly 40ms for 7500 line file)
+            queue_ls = self._parseQueue(self._filterQueueLine(self._readAllLines()))
+
+        if len(queue_ls) == 0:
+            return {
+                "count": -2,
+                "message": "GFN not in queue, or wait longer before next request."
+            }
+
+        queue = queue_ls[-1]
+        if queue["state"] != 1:
+            return {
+                "count": -1,
+                "message": 
+                    "Should already be in.\n" 
+                    f"(time={queue['datetime'].strftime('%Y-%m-%d %H:%M:%S.%f')}, "
+                    f"state={queue['state']}, "
+                    f"queue={queue['queue']})"
+            }
+        return {
+            "count": queue['queue']-1,
+            "message": 
+                f"(time={queue['datetime'].strftime('%Y-%m-%d %H:%M:%S.%f')}, "
+                f"state={queue['state']}, "
+                f"queue={queue['queue']})"
+        }
+        
+gfnviewer = GFNViewerDebugFile()
 
 @app.route('/gfnviewer', methods=['GET', 'POST'])
 def requestQueue():
@@ -153,7 +251,7 @@ def requestQueue():
 
 @app.route('/gfnopener', methods=['GET', 'POST'])
 def requestOpen():
-    if gfnviewer.getGFNHwnd() > 0:
+    if GFNHwndManager().getGFNHwnd() > 0:
         return jsonify({
             "code": 1,
             "message": "GFN is already opened."
@@ -167,7 +265,7 @@ def requestOpen():
 
 # @app.route('/gfncloser', methods=['GET', 'POST'])
 def requestClose():
-    hwnd = gfnviewer.getGFNHwnd()
+    hwnd = GFNHwndManager().getGFNHwnd()
     if hwnd < 0:
         return jsonify({
             "code": 1,
