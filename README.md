@@ -25,7 +25,8 @@ Demo video: https://youtu.be/jcujfVqw4Y0
 
 ## Prerequisites & Setup
 ### Tesseract
-> 如果用舊版的偵測方式 (GFNViewerTesseract) 的話
+> 如果用舊版的偵測方式 (GFNViewerTesseract) 的話才需要。
+
 請裝最新版 (> 5.0)。
 **請確認有安裝到繁體中文`chi_tra`的檔案！** 也就是安裝完之後，應該會有檔案`<your_path>/Tesseract-OCR/tessdata/chi_tra.traineddata`
 
@@ -36,7 +37,7 @@ Demo video: https://youtu.be/jcujfVqw4Y0
   + 應該會是`<your_path>/Tesseract-OCR/tessdata`。
 
 ### TeamViewer
-因為有各種因素可能會出問題，所以給予遠端透過此伺服器開啟TeamViewer開啟的選項。如果你出門前忘了開TeamViewer可以透過一次性要求的API開起來。
+因為有各種因素可能會出問題，或是你可能想重開GFN，所以給予遠端透過此伺服器開啟TeamViewer開啟的選項。如果你出門前忘了開TeamViewer可以透過一次性要求的API開起來。
 
 ### VPN
 因為家裡電腦八成沒有public IP，需要弄一個VPN出來。
@@ -75,6 +76,7 @@ ref. `requirements.txt`
 ### GFN
 + `GFN_SEARCH_STRING`: 找GFN視窗的時候用來對應的子字串，如果找到的視窗數不等於1的話都會回傳失敗。
   + 你可以在`main.py`的視窗裡看到搜尋到的視窗有什麼。那個list應該只有一個東西才對。
+  + 給Tesseract用的，不需要管。
 + `GFN_START_COMMAND`: 用來開啟遊戲用的。不想遠端開啟遊戲的話不改也沒關係。
   + 請在GFN裡面把想要的遊戲設成捷徑，然後右鍵 > 內容，把目標複製貼上。
 ![](images/gfn_start_command.png)
@@ -92,7 +94,9 @@ ref. `requirements.txt`
 }
 ```
 其中`count`為負時為錯誤或結束。請參考傳的message看看目前狀況。
-其實因為GFN進入遊戲後照理來說應該找不到排隊數字，所以會有錯誤(為找不到排隊數字)。請根據GFN Queue Tracker紀錄的History欄位看看是否是錯誤，還是其實真的是人數到了。
+
+> 其實在Tesseract中因為GFN進入遊戲後照理來說應該找不到排隊數字，所以會有錯誤(為找不到排隊數字)。請根據GFN Queue Tracker紀錄的History欄位看看是否是錯誤，還是其實真的是人數到了。
+> 不過現在是用debug file判斷了，回應的message比較準確。
 
 其他一次性要求(request list)回傳
 ```
