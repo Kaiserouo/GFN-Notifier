@@ -50,7 +50,7 @@ def requestQueue():
 
 @app.route('/gfnopener', methods=['GET', 'POST'])
 def requestOpen():
-    if GFNHwndManager().getGFNHwnd() > 0:
+    if GFNHwndManager().getGFNDesktopHwnd() > 0:
         return jsonify({
             "code": 1,
             "message": "GFN is already opened."

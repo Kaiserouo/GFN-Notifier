@@ -8,9 +8,6 @@ from ctypes import windll
 from pathlib import Path
 
 
-GFN_SEARCH_STRING = '在 GeForce NOW 上玩'
-
-
 class GFNHwndManager:
     """
         Manages everything regarding hwnd. Especially GFN
@@ -70,18 +67,21 @@ class GFNHwndManager:
 
         return im
 
-    def getHwnd(self, substr):
-        # if is not executing then return -1
-        hwnd_ls = self._filterWindow(lambda x,y: substr in y)
+    def getHwndUnique(self, func):
+        # if the function got is not unique (len = 1) then return -1
+        hwnd_ls = self._filterWindow(func)
         print([win32gui.GetWindowText(hwnd) + f'({hwnd})' for hwnd in hwnd_ls])
         if len(hwnd_ls) != 1:
             return -1
         return hwnd_ls[0]
 
-    def getGFNHwnd(self):
-        return self.getHwnd(GFN_SEARCH_STRING)
+    def getGFNDesktopHwnd(self):
+        return self.getHwndUnique(lambda hwnd, s: 'GeForce NOW' in s and 'Chrome' not in s)
 
-class GFNViewerTesseract:
+    def getGFNChromeHwnd(self):
+        return self.getHwndUnique(lambda hwnd, s: 'GeForce NOW' in s and 'Chrome' in s)
+
+class GFNViewerDesktopTesseract:
     """
         Snapshot the window and use OCR to work out the queue number;
         Not really direct, a bit slow, and may have error.
@@ -90,9 +90,12 @@ class GFNViewerTesseract:
     def __init__(self):
         self.hwnd_manager = GFNHwndManager()
     
+    def _getHwnd(self):
+        return self.hwnd_manager.getGFNDesktopHwnd()
+        
     def getQueueCount(self):
         import pytesseract
-        hwnd = self.hwnd_manager.getGFNHwnd()
+        hwnd = self._getHwnd()
         if hwnd < 0:
             # not executing
             return {
@@ -137,6 +140,10 @@ class GFNViewerTesseract:
         lParam = win32api.MAKELONG(x, y)
         win32gui.SendMessage(hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
         win32gui.SendMessage(hwnd, win32con.WM_LBUTTONUP, None, lParam)
+
+class GFNViewerChromeTesseract(GFNViewerDesktopTesseract):
+    def _getHwnd(self):
+        return self.hwnd_manager.getGFNChromeHwnd()
 
 class GFNViewerDebugFile:
     """
