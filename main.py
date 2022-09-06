@@ -4,7 +4,7 @@ import atexit
 import win32gui, win32con
 import time
 
-from gfnviewer import GFNHwndManager, GFNViewerDebugFile
+from gfnviewer import *
 
 # --- config ---
 
@@ -40,13 +40,31 @@ TEAMVIEWER_PATH = r'C:\Program Files\TeamViewer\TeamViewer.exe'
 app = Flask(__name__)
 
 # change this to GFNViewerTesseract for old detection method
-gfnviewer = GFNViewerDebugFile()
+gfnviewer_pc = GFNViewerDebugFile()
+gfnviewer_chrome = GFNViewerChromeTesseract()
 
 @app.route('/gfnviewer', methods=['GET', 'POST'])
 def requestQueue():
-    d = gfnviewer.getQueueCount()
-    print(d["count"])
-    return jsonify(d)
+    d_pc = gfnviewer_pc.getQueueCount()
+    print(d_pc["count"])
+    return jsonify(d_pc)
+
+@app.route('/gfnviewerc', methods=['GET', 'POST'])
+def requestQueueChrome():
+    d_ch = gfnviewer_chrome.getQueueCount()
+    return jsonify(d_ch)
+
+@app.route('/gfnviewerb', methods=['GET', 'POST'])
+def requestQueueBoth():
+    d_pc = gfnviewer_pc.getQueueCount()
+    d_ch = gfnviewer_chrome.getQueueCount()
+    print(f'PC={d_pc["count"]} | Chrome={d_ch["count"]}')
+    return jsonify({
+        "count": min(d_pc["count"], d_ch["count"]),
+        "message": f'PC={d_pc["count"]}, Chrome={d_ch["count"]}\n'
+            f'----- PC -----\n{d_pc["message"]}\n--------------\n'
+            f'--- Chrome ---\n{d_ch["message"]}\n--------------'
+    })
 
 @app.route('/gfnopener', methods=['GET', 'POST'])
 def requestOpen():
@@ -63,7 +81,7 @@ def requestOpen():
     })
 
 # @app.route('/gfncloser', methods=['GET', 'POST'])
-def requestClose():
+def requestGFNClose():
     hwnd = GFNHwndManager().getGFNHwnd()
     if hwnd < 0:
         return jsonify({
@@ -76,7 +94,26 @@ def requestClose():
     # and I can't make click event happen what the hell
     win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
     time.sleep(1)
-    gfnviewer.click(864, 508)
+    gfnviewer_pc.click(864, 508)
+
+    return jsonify({
+        "code": 0,
+        "message": ""
+    })
+
+@app.route('/tvcloser', methods=['GET', 'POST'])
+def requestTVClose():
+    hwnd = GFNHwndManager().getHwndUnique(lambda h, s: s == 'TeamViewer')
+    if hwnd < 0:
+        return jsonify({
+            "code": 1,
+            "message": "TeamViewer is already closed."
+        })
+    
+    # actually send mouse event for it to close
+    # since WM_CLOSE won't close it and forced thread termination breaks it
+    # and I can't make click event happen what the hell
+    win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
 
     return jsonify({
         "code": 0,

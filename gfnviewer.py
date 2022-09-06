@@ -2,6 +2,7 @@ import collections
 import re
 import os
 import datetime
+import time
 import win32gui, win32con, win32ui, win32api
 from PIL import Image
 from ctypes import windll
@@ -109,6 +110,7 @@ class GFNViewerDesktopTesseract:
             win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
             if foreground_hwnd != 0:
                 win32gui.SetForegroundWindow(hwnd)
+            time.sleep(0.5)
                 
         # get image
         img = self.hwnd_manager._getScreenshot(hwnd)
